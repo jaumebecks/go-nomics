@@ -1,6 +1,7 @@
 package currencies
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -24,10 +25,52 @@ type TickerQuery struct {
 	Page         int
 }
 
+type tickerInterval struct {
+	Volume             string `json:"volume"`
+	PriceChange        string `json:"price_change"`
+	PriceChangePct     string `json:"price_change_pct"`
+	VolumeChange       string `json:"volume_change"`
+	VolumeChangePct    string `json:"volume_change_pct"`
+	MarketCapChange    string `json:"market_cap_change"`
+	MarketCapChangePct string `json:"market_cap_change_pct"`
+}
+
+// TickerResponse https://nomics.com/docs/#operation/getCurrenciesTicker
+type TickerResponse struct {
+	ID                string         `json:"id"`
+	Currency          string         `json:"currency"`
+	Symbol            string         `json:"symbol"`
+	Name              string         `json:"name"`
+	LogoURL           string         `json:"logo_url"`
+	Status            string         `json:"status"`
+	Price             string         `json:"price"`
+	PriceDate         string         `json:"price_date"`
+	PriceTimestamp    string         `json:"price_timestamp"`
+	CirculatingSupply string         `json:"circulating_supply"`
+	MaxSupply         string         `json:"max_supply"`
+	MarketCap         string         `json:"market_cap"`
+	NumExchanges      string         `json:"num_exchanges"`
+	NumPairs          string         `json:"num_pairs"`
+	NumPairsUnmapped  string         `json:"num_pairs_unmapped"`
+	FirstCandle       string         `json:"first_candle"`
+	FirstTrade        string         `json:"first_trade"`
+	FirstOrderBook    string         `json:"first_order_book"`
+	Rank              string         `json:"rank"`
+	RankDelta         string         `json:"rank_delta"`
+	High              string         `json:"high"`
+	HighTimestamp     string         `json:"high_timestamp"`
+	Interval1Hour     tickerInterval `json:"1h"`
+	Interval1Day      tickerInterval `json:"1d"`
+	Interval7Days     tickerInterval `json:"7d"`
+	Interval30Days    tickerInterval `json:"30d"`
+	Interval365Days   tickerInterval `json:"365d"`
+	IntervalYTD       tickerInterval `json:"ytd"`
+}
+
 // Ticker returns Price, volume, market cap, and rank for all currencies across
 // 1 hour, 1 day, 7 day, 30 day, 365 day, and year to date intervals.
 // Current prices are updated every 10 seconds.
-func Ticker(apiKey string, query TickerQuery) []byte {
+func Ticker(apiKey string, query TickerQuery) []TickerResponse {
 	URL, error := url.Parse(baseURL)
 	if error != nil {
 		log.Fatal("Error building API base URL")
@@ -45,7 +88,13 @@ func Ticker(apiKey string, query TickerQuery) []byte {
 		log.Fatal(error)
 	}
 
-	return body
+	tickerResponses := []TickerResponse{}
+	error = json.Unmarshal(body, &tickerResponses)
+	if error != nil {
+		log.Fatal(error)
+	}
+
+	return tickerResponses
 }
 
 func buildQuery(URL *url.URL, apiKey string, query TickerQuery) {
